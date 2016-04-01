@@ -1,0 +1,3 @@
+serialPort is closed!
+Changed function:
+---------
