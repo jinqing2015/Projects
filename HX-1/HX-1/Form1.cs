@@ -142,6 +142,8 @@ namespace HX_1
                 {
                     DealData.Output("readlength != 12");
                 }
+                DealData.Output("Received data:" + BitConverter.ToString(readBuffer));
+
             }catch(Exception excep){
                 DealData.Output("Read exception" + excep.Message);
             }

@@ -84,13 +84,20 @@ namespace HX_1
         //CRC16校验算法
         public static byte[] CRC16(byte[] data)
         {
+            //byte[] returnVal = GetCRC16ByPoly(data, 0x6886, false);
+           
             byte[] returnVal = new byte[2];
             byte CRC16Lo, CRC16Hi, CL, CH, SaveHi, SaveLo;
             int i, Flag;
-            CRC16Lo = 0xFF;
+            
+            //CRC16初始值
+            CRC16Lo = 0xFF; 
             CRC16Hi = 0xFF;
+
+            //CRC16多项式
             CL = 0x86;
             CH = 0x68;
+            
             for (i = 0; i < data.Length; i++)
             {
                 CRC16Lo = (byte)(CRC16Lo ^ data[i]);//每一个数据与CRC寄存器进行异或
@@ -112,9 +119,44 @@ namespace HX_1
                 }
             }
             returnVal[1] = CRC16Hi;//CRC高位
-            returnVal[0] = CRC16Lo;//CRC低位
+            returnVal[0] = CRC16Lo;//CRC低位 
             return returnVal;
         }
+       
+        /*
+         * 函数功能：多项式参数 CRC16计算  
+         * 参数：命令、多项式、高位是否在前
+         * 返回值：校验码
+         */
+        public static byte[] GetCRC16ByPoly(byte[] Cmd, ushort Poly, bool IsHighBefore)
+        {
+            byte[] CRC = new byte[2];
+            ushort CRCValue = 0xFFFF;
+            for (int i = 0; i < Cmd.Length; i++)
+            {
+                CRCValue = (ushort)(CRCValue ^ Cmd[i]);
+                for (int j = 0; j < 8; j++)
+                {
+                    if ((CRCValue & 0x0001) != 0)
+                    {
+                        CRCValue = (ushort)((CRCValue >> 1) ^ Poly);
+                    }
+                    else
+                    {
+                        CRCValue = (ushort)(CRCValue >> 1);
+                    }
+                }
+            }
+            byte[] Check = BitConverter.GetBytes(CRCValue);
+            if (IsHighBefore == true)
+            {
+                return new byte[2] { Check[1], Check[0] };
+            }
+            else
+            {
+                return Check;
+            }
+        }  
 
         //将int转换成4byte的数组
         public static byte[] ConvertIntToByteArray(int m)
