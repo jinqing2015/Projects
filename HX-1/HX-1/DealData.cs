@@ -95,9 +95,9 @@ namespace HX_1
             CRC16Hi = 0xFF;
 
             //CRC16多项式
-            CL = 0x86;
-            CH = 0x68;
-            
+            CL = 0x01;
+            CH = 0xA0;
+
             for (i = 0; i < data.Length; i++)
             {
                 CRC16Lo = (byte)(CRC16Lo ^ data[i]);//每一个数据与CRC寄存器进行异或

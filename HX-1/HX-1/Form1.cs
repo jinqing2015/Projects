@@ -40,25 +40,32 @@ namespace HX_1
             DealData.Output("IN setComConfig function:");
             //获得当前选中的COM,如果COM口的名字是空的，则输出错误信息直接返回
             string portName = this.comboBox_COM.Text;
+            DealData.Output("portName is " + portName);
+                
             if (portName == ""){
                 DealData.Output("portName is empty");
                 return;
             }
-
+            
             serialPort.PortName = portName; //设置串口号
+            /*
             serialPort.BaudRate = 9600;//设置波特率
             serialPort.DataBits = 8; //设置数据位
             serialPort.StopBits = StopBits.One; //设置停止位
             serialPort.Parity = Parity.None;  //设置无校验
+            serialPort.DtrEnable = true;
+            serialPort.RtsEnable = true;
             serialPort.ReadTimeout = 20; //设置读超时
             serialPort.WriteTimeout = 20; //设置写超时
             serialPort.ReceivedBytesThreshold = 12; //设置接受数据的长度
+            serialPort.DataReceived += new SerialDataReceivedEventHandler(DataReceviedHandler);
+            */
 
-        }
+          }
         //连接按钮被按下时
         private void button_Connect_Click(object sender, EventArgs e)
         {
-            DealData.Output("In textBox_Address_TextChanged function:");
+            DealData.Output("In button_Connect_Click function:");
             this.setSerialPortConfig();
 
             //判断地址栏是否有效
@@ -77,7 +84,7 @@ namespace HX_1
                 //将串口打开并进行状态查询
                 serialPort.Open();
             }catch(Exception excep){
-                DealData.Output("Open exception" + excep.Message);
+                DealData.Output("Open exception:" + excep.Message);
             }
 
             if (!serialPort.IsOpen){
@@ -93,9 +100,11 @@ namespace HX_1
             byte[] crc = DealData.CRC16(tempData);
             byte[] stateOrder = { (byte)address, 0x10, 0x00, 0x00, 0x00, 0x00, crc[0],crc[1]};
 
+
             try{
                 //将命令写到输出缓冲区中
                 serialPort.Write(stateOrder, 0, stateOrder.Length);
+                DealData.Output(BitConverter.ToString(stateOrder).Replace("-", string.Empty));
             }catch (Exception excep) {
                 DealData.Output("Write exception" + excep.Message);
             }
