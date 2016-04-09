@@ -75,7 +75,7 @@ namespace HX_1
             
             byte[] returnValue = CRC16(CRC_data);
             //比较校验值
-            if (returnValue[0] == data[data.Length - 2] || returnValue[1] == data[data.Length - 1]) {
+            if (returnValue[0] == data[data.Length - 2] && returnValue[1] == data[data.Length - 1]) {
                 return true;
             }
             return false;

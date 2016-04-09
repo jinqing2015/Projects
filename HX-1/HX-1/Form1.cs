@@ -115,7 +115,7 @@ namespace HX_1
            
         }
         /*
-         *函数功能：作为每500ms发送状态查询指令的线程
+         *函数功能：发送状态查询指令的线程
          * 
          * 
          */
@@ -135,7 +135,7 @@ namespace HX_1
                 {
                     DealData.Output("Write exception" + excep.Message);
                 }
-                Thread.Sleep(10000);//500毫秒            
+                Thread.Sleep(1000);//设置查询的间隔时间           
             }
         }
 
@@ -182,7 +182,13 @@ namespace HX_1
                 int readlength = serialPort.Read(readBuffer, 0, this.responseByteSize);
                 if (readlength != this.responseByteSize)
                 {
-                    DealData.Output("readlength != 12");
+                    //如果每次缓冲区中没有都全，则会影响下一次的读取
+                    //所以把没有都全的部分读出来，保证下一次的读取时正确的
+                    //保证程序的鲁棒性
+                    DealData.Output("readlength != 12, readlength = " + readlength);
+                    serialPort.Read(readBuffer, 0, this.responseByteSize - readlength);
+                    DealData.Output("Received data length:" + (this.responseByteSize - readlength) + ", Received data:" + BitConverter.ToString(readBuffer));
+                    return;
                 }
                 DealData.Output("Received data:" + BitConverter.ToString(readBuffer));
 
@@ -212,53 +218,83 @@ namespace HX_1
                 DealData.Output("address != addressBuffer");
                 return;
             }
-            //按照数据解析，设置相应状态和文本框数据
-            this.textBox_DirectCurrent.Text = dealObj.outputCurrent.ToString();
-            this.textBox_DirectVoltage.Text = dealObj.outputVoltage.ToString();
-            this.textBox_Temperature.Text = dealObj.tempature.ToString();
+            //进而要想将辅助线程中所读到的数据显示到主线程的Form控件上时，
+            //只有通过Invoke方法来实现,将Invoke方法内的命令在调用Invoke方法的对象
+            // (这里是this.groupBox_State控件)所在的线程上执行。
+            this.groupBox_State.Invoke(
+                new MethodInvoker(
+                    delegate
+                    {
+                        //按照数据解析，设置相应状态和文本框数据
+                        this.textBox_DirectCurrent.Text = dealObj.outputCurrent.ToString();
+                        this.textBox_DirectVoltage.Text = dealObj.outputVoltage.ToString();
+                        this.textBox_Temperature.Text = dealObj.tempature.ToString();
 
-            if (dealObj.shutdown == true){//关机
-                this.pictureBox1.BackColor = Color.Red;
-            }else {
-                this.pictureBox1.BackColor = Color.Green;
-            }
+                        if (dealObj.shutdown == true)
+                        {//关机
+                            this.pictureBox1.BackColor = Color.Red;
+                        }
+                        else
+                        {
+                            this.pictureBox1.BackColor = Color.Green;
+                        }
 
-            if(dealObj.overTempature == true){//过温
-                this.pictureBox3.BackColor = Color.Red;
-            }else{
-                this.pictureBox3.BackColor = Color.Green;
-            }
+                        if (dealObj.overTempature == true)
+                        {//过温
+                            this.pictureBox3.BackColor = Color.Red;
+                        }
+                        else
+                        {
+                            this.pictureBox3.BackColor = Color.Green;
+                        }
 
-            if(dealObj.shortCircuit == true ){//短路
-                this.pictureBox4.BackColor = Color.Red;
-            }else{
-                this.pictureBox4.BackColor = Color.Green;
-            }
+                        if (dealObj.shortCircuit == true)
+                        {//短路
+                            this.pictureBox4.BackColor = Color.Red;
+                        }
+                        else
+                        {
+                            this.pictureBox4.BackColor = Color.Green;
+                        }
 
-            if(dealObj.overVoltage == true){//输出过压
-                this.pictureBox5.BackColor = Color.Red;
-            }else{
-                this.pictureBox5.BackColor = Color.Green;
-            }
+                        if (dealObj.overVoltage == true)
+                        {//输出过压
+                            this.pictureBox5.BackColor = Color.Red;
+                        }
+                        else
+                        {
+                            this.pictureBox5.BackColor = Color.Green;
+                        }
 
-            if(dealObj.underVoltage == true){//输入欠压
-                this.pictureBox6.BackColor = Color.Red;
-            }else {
-                this.pictureBox6.BackColor = Color.Green;
-            }
+                        if (dealObj.underVoltage == true)
+                        {//输入欠压
+                            this.pictureBox6.BackColor = Color.Red;
+                        }
+                        else
+                        {
+                            this.pictureBox6.BackColor = Color.Green;
+                        }
 
-            if(dealObj.overCurrent == true){//输出过流
-                this.pictureBox7.BackColor = Color.Red;
-            }else{
-                this.pictureBox7.BackColor = Color.Green;
-            }
+                        if (dealObj.overCurrent == true)
+                        {//输出过流
+                            this.pictureBox7.BackColor = Color.Red;
+                        }
+                        else
+                        {
+                            this.pictureBox7.BackColor = Color.Green;
+                        }
 
-            if(dealObj.fan == true){//风机
-                this.pictureBox8.BackColor = Color.Red;
-            }else{
-                this.pictureBox8.BackColor = Color.Green;
-            }
-            
+                        if (dealObj.fan == true)
+                        {//风机
+                            this.pictureBox8.BackColor = Color.Red;
+                        }
+                        else
+                        {
+                            this.pictureBox8.BackColor = Color.Green;
+                        }
+                    }
+                )
+            );
         }
 
         //设置输出电流按钮被按下
@@ -279,7 +315,7 @@ namespace HX_1
             byte[] current = DealData.ConvertIntToByteArray(setOutputCurrent);
             byte[] tempData = { (byte)address, 0x11, current[0], current[1], 0x00, 0x00 };
             byte[] crc = DealData.CRC16(tempData);
-            byte[] setOutputCurrentOrder = { (byte)address, 0x11, 0x00, 0x00, 0x00, 0x00, crc[0], crc[1] };
+            byte[] setOutputCurrentOrder = { (byte)address, 0x11, current[0], current[1], 0x00, 0x00, crc[0], crc[1] };
 
             try{
                 //将命令写到输出缓冲区中
