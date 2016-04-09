@@ -6,6 +6,7 @@ using System.Drawing;
 using System.IO.Ports;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using System.Windows.Forms;
 
 namespace HX_1
@@ -13,6 +14,9 @@ namespace HX_1
     public partial class Form_HX : Form
     {
         int responseByteSize = 12;//设置返回数据的字节数
+        object lockObject = new object(); //保护读缓冲区的锁
+        Thread queryThread = null; //查询状态线程
+        byte[] stateOrder = new byte[8];
 
         public Form_HX()
         {
@@ -98,22 +102,51 @@ namespace HX_1
            
             byte[] tempData = {(byte)address, 0x10, 0x00, 0x00, 0x00, 0x00};
             byte[] crc = DealData.CRC16(tempData);
-            byte[] stateOrder = { (byte)address, 0x10, 0x00, 0x00, 0x00, 0x00, crc[0],crc[1]};
-
-
-            try{
-                //将命令写到输出缓冲区中
-                serialPort.Write(stateOrder, 0, stateOrder.Length);
-                DealData.Output(BitConverter.ToString(stateOrder).Replace("-", string.Empty));
-            }catch (Exception excep) {
-                DealData.Output("Write exception" + excep.Message);
+            //初始化查询指令
+            stateOrder[0] = (byte)address;
+            stateOrder[1] = 0x10;
+            stateOrder[stateOrder.Length - 2] = crc[0];
+            stateOrder[stateOrder.Length - 1] = crc[1];
+            
+            queryThread = new Thread(new ThreadStart(queryThreadFunc));
+            queryThread.IsBackground = true;
+            queryThread.Start();
+            DealData.Output("QueryThreadFunc thread create");   
+           
+        }
+        /*
+         *函数功能：作为每500ms发送状态查询指令的线程
+         * 
+         * 
+         */
+        public void queryThreadFunc() {
+            
+            while (true) {
+                DealData.Output("In queryThreadFunc function:");
+                try
+                {
+                    //将命令写到输出缓冲区中
+                    lock (lockObject) {
+                        serialPort.Write(stateOrder, 0, stateOrder.Length);
+                        DealData.Output("stateOrder:" + BitConverter.ToString(stateOrder));
+                    }                
+                }
+                catch (Exception excep)
+                {
+                    DealData.Output("Write exception" + excep.Message);
+                }
+                Thread.Sleep(10000);//500毫秒            
             }
         }
+
 
         //断开连接按钮被按下
         private void button_Disconnect_Click(object sender, EventArgs e)
         {
             DealData.Output("In button_Disconnect_Click function:");
+            //将查询线程终止
+            queryThread.Abort();
+
             this.button_Disconnect.Visible = false;
             this.button_Connect.Visible = true;
             try{
@@ -163,7 +196,7 @@ namespace HX_1
             {
                 DealData.Output("CRC16 check failed");
                 return;
-            }
+            } 
             //对数据进行解析
             DealData dealObj = new DealData();
             dealObj.AnalysisResData(readBuffer);
@@ -225,6 +258,7 @@ namespace HX_1
             }else{
                 this.pictureBox8.BackColor = Color.Green;
             }
+            
         }
 
         //设置输出电流按钮被按下
@@ -249,7 +283,10 @@ namespace HX_1
 
             try{
                 //将命令写到输出缓冲区中
-                serialPort.Write(setOutputCurrentOrder, 0, setOutputCurrentOrder.Length);
+                lock (lockObject) { 
+                    serialPort.Write(setOutputCurrentOrder, 0, setOutputCurrentOrder.Length);
+                    DealData.Output(BitConverter.ToString(setOutputCurrentOrder));
+                }
             } catch (Exception excep){
                 DealData.Output("Write exception:" + excep.Message);
             }
@@ -280,7 +317,10 @@ namespace HX_1
 
             try{
                 //将命令写到输出缓冲区中
-                serialPort.Write(openCloseOrder, 0, openCloseOrder.Length);
+                lock (lockObject) { 
+                    serialPort.Write(openCloseOrder, 0, openCloseOrder.Length);
+                    DealData.Output(BitConverter.ToString(openCloseOrder));
+                }
             }catch (Exception excep){
                 DealData.Output("Write exception:" + excep.Message);
             }
@@ -289,29 +329,7 @@ namespace HX_1
         //当文本框的值发生变化时
         private void textBox_Address_TextChanged(object sender, EventArgs e)
         {
-            DealData.Output("In textBox_Address_TextChanged function:");
-            
-            if (!serialPort.IsOpen) {
-                DealData.Output("serialPort is closed!");
-                return;
-            }
 
-            //判断地址栏是否有效
-            int address = CheckInfo.Check_textBox_Address(this.textBox_Address.Text);
-            if (address == 0)
-                return;
-
-            //设置查询指令
-            byte[] tempData = { (byte)address, 0x10, 0x00, 0x00, 0x00, 0x00 };
-            byte[] crc = DealData.CRC16(tempData);
-            byte[] stateOrder = { (byte)address, 0x10, 0x00, 0x00, 0x00, 0x00, crc[0], crc[1] };
-
-            try{
-                //将命令写到输出缓冲区中
-                serialPort.Write(stateOrder, 0, stateOrder.Length);
-            }catch (Exception excep){
-                DealData.Output("Write exception " + excep.Message);
-            }
         }
     }
 }

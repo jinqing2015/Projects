@@ -58,7 +58,7 @@ namespace HX_1
             try{
                 //获取设置输出电流
                 setOutputCurrent = int.Parse(currentStr);
-                if (setOutputCurrent < 1 || setOutputCurrent > 300)
+                if (setOutputCurrent < 1 || setOutputCurrent > 500)
                 {
                     DealData.Output("setOutputCurrent out of range!");
                     return 0;
