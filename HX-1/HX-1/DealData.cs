@@ -21,7 +21,8 @@ namespace HX_1
         public bool underVoltage = false;     //输入欠压
         public bool overCurrent = false;      //输出过流
         public bool fan = false;              //风机
-        
+
+        private static Object lockObjectForLog = new object();
         
         //分析相应数据
         public void AnalysisResData(byte[] data)
@@ -177,19 +178,24 @@ namespace HX_1
          *
          */
         public static void Output(string log) {
-
-            if (!File.Exists("HX_1-log.txt")){
-                FileStream fs = new FileStream("HX_1-log.txt", FileMode.Create, FileAccess.Write);
-                StreamWriter sw = new StreamWriter(fs);
-                sw.WriteLine(DateTime.Now.ToString("HH:mm:ss ---  ") + log);
-                sw.Close();
-            }else {
-                FileStream fs = new FileStream("HX_1-log.txt", FileMode.Append, FileAccess.Write);
-                StreamWriter sw = new StreamWriter(fs);
-                sw.WriteLine(DateTime.Now.ToString("HH:mm:ss ---  ") + log);
-                sw.Close();
+            
+            //由于文件是共享的资源，当线程在访问的时候
+            //可能会引起资源访问的冲突
+            //所以在写文件内容的时候需要进行互斥
+            lock(lockObjectForLog){
+                if (!File.Exists("HX_1-log.txt")){
+                    FileStream fs = new FileStream("HX_1-log.txt", FileMode.Create, FileAccess.Write);
+                    StreamWriter sw = new StreamWriter(fs);
+                    sw.WriteLine(DateTime.Now.ToString("HH:mm:ss ---  ") + log);
+                    sw.Close();
+                }else {
+                    FileStream fs = new FileStream("HX_1-log.txt", FileMode.Append, FileAccess.Write);
+                    StreamWriter sw = new StreamWriter(fs);
+                    sw.WriteLine(DateTime.Now.ToString("HH:mm:ss ---  ") + log);
+                    sw.Close();
+                }
+                Console.WriteLine(DateTime.Now.ToString("HH:mm:ss ---  ") + log);
             }
-            Console.WriteLine(DateTime.Now.ToString("HH:mm:ss ---  ") + log);  
         }
     }
 }

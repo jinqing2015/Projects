@@ -29,6 +29,10 @@ namespace HX_1
             DealData.Output("---------------------------------------------------");
             DealData.Output("IN Form_HX_Load function:SUCCESS");
 
+            //测试
+            //Control.CheckForIllegalCrossThreadCalls = false;
+
+
             this.textBox_Address.Text = "1";   //初始化地址为0
             //获取本机的所有串口,将端口放到列表中
             string[] portList = SerialPort.GetPortNames();
@@ -109,7 +113,7 @@ namespace HX_1
             stateOrder[stateOrder.Length - 1] = crc[1];
             
             queryThread = new Thread(new ThreadStart(queryThreadFunc));
-            queryThread.IsBackground = true;
+            queryThread.IsBackground = false;
             queryThread.Start();
             DealData.Output("QueryThreadFunc thread create");   
            
@@ -120,23 +124,27 @@ namespace HX_1
          * 
          */
         public void queryThreadFunc() {
-            
-            while (true) {
-                DealData.Output("In queryThreadFunc function:");
-                try
-                {
-                    //将命令写到输出缓冲区中
-                    lock (lockObject) {
-                        serialPort.Write(stateOrder, 0, stateOrder.Length);
-                        DealData.Output("stateOrder:" + BitConverter.ToString(stateOrder));
-                    }                
-                }
-                catch (Exception excep)
-                {
-                    DealData.Output("Write exception" + excep.Message);
-                }
-                Thread.Sleep(1000);//设置查询的间隔时间           
-            }
+             try{
+                while (true) {
+                    DealData.Output("In queryThreadFunc function:");
+                    try
+                    {
+                        //将命令写到输出缓冲区中
+                        lock (lockObject)
+                        {
+                            serialPort.Write(stateOrder, 0, stateOrder.Length);
+                            DealData.Output("stateOrder:" + BitConverter.ToString(stateOrder));
+                        }
+                    }
+                    catch (Exception excep)
+                    {
+                        DealData.Output("Write exception" + excep.Message);
+                    }
+                    Thread.Sleep(1000);//设置查询的间隔时间   
+                 }
+             }catch (Exception excep){
+                 DealData.Output("queryThreadFunc exception:" + excep.Message);
+             }
         }
 
 
@@ -206,94 +214,90 @@ namespace HX_1
             //对数据进行解析
             DealData dealObj = new DealData();
             dealObj.AnalysisResData(readBuffer);
-
-            //判断地址是否与当前地址一致
-            //判断地址栏是否有效
-            int address = CheckInfo.Check_textBox_Address(this.textBox_Address.Text);
-            if (address == 0)
-                return;
-            int address_readBuffer = (int)readBuffer[0];
-            if (address != address_readBuffer)
+            
+            //在次线程中访问UI空间需要进行的措施
+            this.Invoke((Action)delegate
             {
-                DealData.Output("address != addressBuffer");
-                return;
+                //判断地址是否与当前地址一致
+                //判断地址栏是否有效
+                int address = CheckInfo.Check_textBox_Address(this.textBox_Address.Text);
+                if (address == 0)
+                    return;
+                int address_readBuffer = (int)readBuffer[0];
+                if (address != address_readBuffer)
+                {
+                    DealData.Output("address != addressBuffer");
+                    return;
+                }
+            
+                //按照数据解析，设置相应状态和文本框数据
+                this.textBox_DirectCurrent.Text = dealObj.outputCurrent.ToString();
+                this.textBox_DirectVoltage.Text = dealObj.outputVoltage.ToString();
+                this.textBox_Temperature.Text = dealObj.tempature.ToString();
+
+                if (dealObj.shutdown == true)
+                {//关机
+                    this.pictureBox1.BackColor = Color.Red;
+                }
+                else
+                {
+                    this.pictureBox1.BackColor = Color.Green;
+                }
+
+                if (dealObj.overTempature == true)
+                {//过温
+                    this.pictureBox3.BackColor = Color.Red;
+                }
+                else
+                {
+                    this.pictureBox3.BackColor = Color.Green;
+                }
+
+                if (dealObj.shortCircuit == true)
+                {//短路
+                    this.pictureBox4.BackColor = Color.Red;
+                }
+                else
+                {
+                    this.pictureBox4.BackColor = Color.Green;
+                }
+
+                if (dealObj.overVoltage == true)
+                {//输出过压
+                    this.pictureBox5.BackColor = Color.Red;
+                }
+                else
+                {
+                    this.pictureBox5.BackColor = Color.Green;
+                }
+
+                if (dealObj.underVoltage == true)
+                {//输入欠压
+                    this.pictureBox6.BackColor = Color.Red;
+                }
+                else
+                {
+                    this.pictureBox6.BackColor = Color.Green;
+                }
+
+                if (dealObj.overCurrent == true)
+                {//输出过流
+                    this.pictureBox7.BackColor = Color.Red;
+                }
+                else
+                {
+                    this.pictureBox7.BackColor = Color.Green;
+                }
+
+                if (dealObj.fan == true)
+                {//风机
+                    this.pictureBox8.BackColor = Color.Red;
+                }
+                else
+                {
+                    this.pictureBox8.BackColor = Color.Green;
+                }
             }
-            //进而要想将辅助线程中所读到的数据显示到主线程的Form控件上时，
-            //只有通过Invoke方法来实现,将Invoke方法内的命令在调用Invoke方法的对象
-            // (这里是this.groupBox_State控件)所在的线程上执行。
-            this.groupBox_State.Invoke(
-                new MethodInvoker(
-                    delegate
-                    {
-                        //按照数据解析，设置相应状态和文本框数据
-                        this.textBox_DirectCurrent.Text = dealObj.outputCurrent.ToString();
-                        this.textBox_DirectVoltage.Text = dealObj.outputVoltage.ToString();
-                        this.textBox_Temperature.Text = dealObj.tempature.ToString();
-
-                        if (dealObj.shutdown == true)
-                        {//关机
-                            this.pictureBox1.BackColor = Color.Red;
-                        }
-                        else
-                        {
-                            this.pictureBox1.BackColor = Color.Green;
-                        }
-
-                        if (dealObj.overTempature == true)
-                        {//过温
-                            this.pictureBox3.BackColor = Color.Red;
-                        }
-                        else
-                        {
-                            this.pictureBox3.BackColor = Color.Green;
-                        }
-
-                        if (dealObj.shortCircuit == true)
-                        {//短路
-                            this.pictureBox4.BackColor = Color.Red;
-                        }
-                        else
-                        {
-                            this.pictureBox4.BackColor = Color.Green;
-                        }
-
-                        if (dealObj.overVoltage == true)
-                        {//输出过压
-                            this.pictureBox5.BackColor = Color.Red;
-                        }
-                        else
-                        {
-                            this.pictureBox5.BackColor = Color.Green;
-                        }
-
-                        if (dealObj.underVoltage == true)
-                        {//输入欠压
-                            this.pictureBox6.BackColor = Color.Red;
-                        }
-                        else
-                        {
-                            this.pictureBox6.BackColor = Color.Green;
-                        }
-
-                        if (dealObj.overCurrent == true)
-                        {//输出过流
-                            this.pictureBox7.BackColor = Color.Red;
-                        }
-                        else
-                        {
-                            this.pictureBox7.BackColor = Color.Green;
-                        }
-
-                        if (dealObj.fan == true)
-                        {//风机
-                            this.pictureBox8.BackColor = Color.Red;
-                        }
-                        else
-                        {
-                            this.pictureBox8.BackColor = Color.Green;
-                        }
-                    }
-                )
             );
         }
 

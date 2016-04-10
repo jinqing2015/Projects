@@ -63,7 +63,8 @@ namespace HX_1
                     DealData.Output("setOutputCurrent out of range!");
                     return 0;
                 }
-                return setOutputCurrent;
+                //需要将设定输出电流的值乘以10
+                return setOutputCurrent * 10;
             }catch (Exception excep){
                 DealData.Output(excep.Message);
                 return 0;
