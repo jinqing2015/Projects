@@ -186,21 +186,20 @@ namespace HX_1
         //通过事件接受
         private void DataReceived(object sender, SerialDataReceivedEventArgs e)
         {
-            try
-            {
+            
                 DealData.Output("In DataReceived function:");
                 byte[] readBuffer = new byte[this.responseByteSize];
 
                 //读取数据
                 try
                 {
-                    int readlength = serialPort.Read(readBuffer, 0, this.responseByteSize);
+                    int readlength = serialPort.Read(readBuffer, 0, readBuffer.Length);
                     while (readlength != this.responseByteSize)
                     {
                         //如果每次缓冲区中没有都全，则会影响下一次的读取
                         //所以把没有都全的部分读出来，保证下一次的读取时正确的
                         //保证程序的鲁棒性
-                        int length = serialPort.Read(readBuffer, readlength, this.responseByteSize - readlength);
+                        int length = serialPort.Read(readBuffer, readlength, readBuffer.Length - readlength);
                         readlength += length;
                         DealData.Output("In while received data:" + BitConverter.ToString(readBuffer));
                     }
@@ -211,7 +210,7 @@ namespace HX_1
                     DealData.Output("Read exception:" + excep.Message);
                     return;
                 }
-
+                DealData.Output("判读数据CRC16校验信息");
                 //判读数据CRC16校验信息
                 bool CRC16_result = DealData.Check_CRC16(readBuffer);
                 if (CRC16_result == false)
@@ -309,9 +308,6 @@ namespace HX_1
                     DealData.Output("UI 处理完毕");
                 }
                 );
-            }catch (Exception excep){
-                DealData.Output("Data received exception message:" + excep.Message);            
-            }
         }
 
         //设置输出电流按钮被按下

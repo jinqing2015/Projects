@@ -27,7 +27,7 @@ namespace HX_1
         //分析相应数据
         public void AnalysisResData(byte[] data)
         {
-
+            DealData.Output("In AnalysisResData function:");
             //设置文本框数据
             this.tempature = (int)data[3];
             this.outputVoltage = (float)data[4] / 10;
@@ -69,7 +69,8 @@ namespace HX_1
         //检查相应数据的CRC16校验
         public static bool Check_CRC16(byte[] data)
         {
-            byte[] CRC_data = new byte[data.Length-2];
+            DealData.Output("In Check_CRC16 function:");
+            byte[] CRC_data = new byte[data.Length - 2];
             for (int i = 0; i < data.Length - 2; i++) {
                 CRC_data[i] = data[i];
             }
@@ -86,7 +87,7 @@ namespace HX_1
         public static byte[] CRC16(byte[] data)
         {
             //byte[] returnVal = GetCRC16ByPoly(data, 0x6886, false);
-           
+            DealData.Output("In CRC16 function:");
             byte[] returnVal = new byte[2];
             byte CRC16Lo, CRC16Hi, CL, CH, SaveHi, SaveLo;
             int i, Flag;
