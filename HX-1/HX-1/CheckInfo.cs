@@ -17,6 +17,7 @@ namespace HX_1
          */
         public static int Check_textBox_Address(string addressStr) 
         {
+            DealData.Output("In Check_textBox_Address function:");
             int address = 0;
             //如果地址栏为空
             if (addressStr.Equals(""))
@@ -48,6 +49,7 @@ namespace HX_1
          */
         public static int Check_textBox_setOutputCurrent(string currentStr) 
         {
+            DealData.Output("In Check_textBox_setOutputCurrent function:");
             int setOutputCurrent = 0;
             //如果设置输出电流为空
             if (currentStr.Equals(""))
