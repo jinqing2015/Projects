@@ -42,4 +42,11 @@ C:\Users\zjq\Desktop\HX-1\HX-1\obj\Debug\HX_1.Form_HX.resources
 C:\Users\zjq\Desktop\HX-1\HX-1\obj\Debug\HX_1.Properties.Resources.resources
 C:\Users\zjq\Desktop\HX-1\HX-1\obj\Debug\HX-1.csproj.GenerateResource.Cache
 D:\Projects\Projects\HX-1\HX-1\bin\Debug\HX-1.exe.config
-D:\Projects\Projects\HX-1\HX-1\obj\Debug\HX-1.csprojResolveAssemblyReference.cache
+C:\Projects\Projects\HX-1\HX-1\bin\Debug\HX-1.exe.config
+C:\Projects\Projects\HX-1\HX-1\obj\Debug\HX-1.exe
+C:\Projects\Projects\HX-1\HX-1\obj\Debug\HX-1.pdb
+C:\Projects\Projects\HX-1\HX-1\bin\Debug\HX-1.exe
+C:\Projects\Projects\HX-1\HX-1\bin\Debug\HX-1.pdb
+C:\Projects\Projects\HX-1\HX-1\obj\Debug\HX_1.Form_HX.resources
+C:\Projects\Projects\HX-1\HX-1\obj\Debug\HX_1.Properties.Resources.resources
+C:\Projects\Projects\HX-1\HX-1\obj\Debug\HX-1.csproj.GenerateResource.Cache

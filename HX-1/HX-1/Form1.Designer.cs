@@ -585,6 +585,7 @@
             this.MinimizeBox = false;
             this.Name = "Form_HX";
             this.Text = "HX-1";
+            this.FormClosed += new System.Windows.Forms.FormClosedEventHandler(this.Form_HX_FormClosed);
             this.Load += new System.EventHandler(this.Form_HX_Load);
             this.groupBox_System.ResumeLayout(false);
             this.groupBox_System.PerformLayout();

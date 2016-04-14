@@ -42,6 +42,23 @@ namespace HX_1
             }
             return;
         }
+        //窗口关闭
+        private void Form_HX_FormClosed(object sender, FormClosedEventArgs e)
+        {
+            //终止查询状态线程
+            queryThread.Abort();
+            //关闭串口
+            try
+            {
+                serialPort.Close();
+            }
+            catch (Exception excep)
+            {
+                DealData.Output("Close exception" + excep.Message);
+            }
+            DealData.Output("IN Form_HX_FormClosed function:SUCCESS");
+            DealData.Output("---------------------------------------------------");
+        }
         //设置serialPort的属性
         private void setSerialPortConfig()
         {
@@ -56,19 +73,6 @@ namespace HX_1
             }
             
             serialPort.PortName = portName; //设置串口号
-            /*
-            serialPort.BaudRate = 9600;//设置波特率
-            serialPort.DataBits = 8; //设置数据位
-            serialPort.StopBits = StopBits.One; //设置停止位
-            serialPort.Parity = Parity.None;  //设置无校验
-            serialPort.DtrEnable = true;
-            serialPort.RtsEnable = true;
-            serialPort.ReadTimeout = 20; //设置读超时
-            serialPort.WriteTimeout = 20; //设置写超时
-            serialPort.ReceivedBytesThreshold = 12; //设置接受数据的长度
-            serialPort.DataReceived += new SerialDataReceivedEventHandler(DataReceviedHandler);
-            */
-
           }
         //连接按钮被按下时
         private void button_Connect_Click(object sender, EventArgs e)
@@ -140,7 +144,7 @@ namespace HX_1
                     {
                         DealData.Output("Write exception" + excep.Message);
                     }
-                    Thread.Sleep(1000);//设置查询的间隔时间   
+                    Thread.Sleep(2000);//设置查询的间隔时间   
                  }
              }catch (Exception excep){
                  DealData.Output("queryThreadFunc exception:" + excep.Message);
@@ -182,123 +186,132 @@ namespace HX_1
         //通过事件接受
         private void DataReceived(object sender, SerialDataReceivedEventArgs e)
         {
-            DealData.Output("In DataReceived function:");
-            byte[] readBuffer = new byte[this.responseByteSize];
-            
-            //读取数据
-            try {
-                int readlength = serialPort.Read(readBuffer, 0, this.responseByteSize);
-                if (readlength != this.responseByteSize)
-                {
-                    //如果每次缓冲区中没有都全，则会影响下一次的读取
-                    //所以把没有都全的部分读出来，保证下一次的读取时正确的
-                    //保证程序的鲁棒性
-                    DealData.Output("readlength != 12, readlength = " + readlength);
-                    serialPort.Read(readBuffer, 0, this.responseByteSize - readlength);
-                    DealData.Output("Received data length:" + (this.responseByteSize - readlength) + ", Received data:" + BitConverter.ToString(readBuffer));
-                    return;
-                }
-                DealData.Output("Received data:" + BitConverter.ToString(readBuffer));
-
-            }catch(Exception excep){
-                DealData.Output("Read exception" + excep.Message);
-            }
-
-            //判读数据CRC16校验信息
-            bool CRC16_result = DealData.Check_CRC16(readBuffer);
-            if (CRC16_result == false)
+            try
             {
-                DealData.Output("CRC16 check failed");
-                return;
-            } 
-            //对数据进行解析
-            DealData dealObj = new DealData();
-            dealObj.AnalysisResData(readBuffer);
-            
-            //在次线程中访问UI空间需要进行的措施
-            this.Invoke((Action)delegate
-            {
-                //判断地址是否与当前地址一致
-                //判断地址栏是否有效
-                int address = CheckInfo.Check_textBox_Address(this.textBox_Address.Text);
-                if (address == 0)
+                DealData.Output("In DataReceived function:");
+                byte[] readBuffer = new byte[this.responseByteSize];
+
+                //读取数据
+                try
+                {
+                    int readlength = serialPort.Read(readBuffer, 0, this.responseByteSize);
+                    while (readlength != this.responseByteSize)
+                    {
+                        //如果每次缓冲区中没有都全，则会影响下一次的读取
+                        //所以把没有都全的部分读出来，保证下一次的读取时正确的
+                        //保证程序的鲁棒性
+                        int length = serialPort.Read(readBuffer, readlength, this.responseByteSize - readlength);
+                        readlength += length;
+                        DealData.Output("In while received data:" + BitConverter.ToString(readBuffer));
+                    }
+                    DealData.Output("Received data:" + BitConverter.ToString(readBuffer));
+                }
+                catch (Exception excep)
+                {
+                    DealData.Output("Read exception:" + excep.Message);
                     return;
-                int address_readBuffer = (int)readBuffer[0];
-                if (address != address_readBuffer)
+                }
+
+                //判读数据CRC16校验信息
+                bool CRC16_result = DealData.Check_CRC16(readBuffer);
+                if (CRC16_result == false)
                 {
-                    DealData.Output("address != addressBuffer");
+                    DealData.Output("CRC16 check failed");
                     return;
                 }
-            
-                //按照数据解析，设置相应状态和文本框数据
-                this.textBox_DirectCurrent.Text = dealObj.outputCurrent.ToString();
-                this.textBox_DirectVoltage.Text = dealObj.outputVoltage.ToString();
-                this.textBox_Temperature.Text = dealObj.tempature.ToString();
+                //对数据进行解析
+                DealData dealObj = new DealData();
+                dealObj.AnalysisResData(readBuffer);
+                DealData.Output("在次线程中访问UI空间需要进行的措施");
 
-                if (dealObj.shutdown == true)
-                {//关机
-                    this.pictureBox1.BackColor = Color.Red;
-                }
-                else
+                //在次线程中访问UI空间需要进行的措施
+                this.Invoke((Action)delegate
                 {
-                    this.pictureBox1.BackColor = Color.Green;
-                }
+                    //判断地址是否与当前地址一致
+                    //判断地址栏是否有效
+                    int address = CheckInfo.Check_textBox_Address(this.textBox_Address.Text);
+                    if (address == 0)
+                        return;
+                    int address_readBuffer = (int)readBuffer[0];
+                    if (address != address_readBuffer)
+                    {
+                        DealData.Output("address != addressBuffer");
+                        return;
+                    }
+                    DealData.Output("按照数据解析，设置相应状态和文本框数据");
+                    //按照数据解析，设置相应状态和文本框数据
+                    this.textBox_DirectCurrent.Text = dealObj.outputCurrent.ToString();
+                    this.textBox_DirectVoltage.Text = dealObj.outputVoltage.ToString();
+                    this.textBox_Temperature.Text = dealObj.tempature.ToString();
 
-                if (dealObj.overTempature == true)
-                {//过温
-                    this.pictureBox3.BackColor = Color.Red;
-                }
-                else
-                {
-                    this.pictureBox3.BackColor = Color.Green;
-                }
+                    if (dealObj.shutdown == true)
+                    {//关机
+                        this.pictureBox1.BackColor = Color.Red;
+                    }
+                    else
+                    {
+                        this.pictureBox1.BackColor = Color.Green;
+                    }
 
-                if (dealObj.shortCircuit == true)
-                {//短路
-                    this.pictureBox4.BackColor = Color.Red;
-                }
-                else
-                {
-                    this.pictureBox4.BackColor = Color.Green;
-                }
+                    if (dealObj.overTempature == true)
+                    {//过温
+                        this.pictureBox3.BackColor = Color.Red;
+                    }
+                    else
+                    {
+                        this.pictureBox3.BackColor = Color.Green;
+                    }
 
-                if (dealObj.overVoltage == true)
-                {//输出过压
-                    this.pictureBox5.BackColor = Color.Red;
-                }
-                else
-                {
-                    this.pictureBox5.BackColor = Color.Green;
-                }
+                    if (dealObj.shortCircuit == true)
+                    {//短路
+                        this.pictureBox4.BackColor = Color.Red;
+                    }
+                    else
+                    {
+                        this.pictureBox4.BackColor = Color.Green;
+                    }
 
-                if (dealObj.underVoltage == true)
-                {//输入欠压
-                    this.pictureBox6.BackColor = Color.Red;
-                }
-                else
-                {
-                    this.pictureBox6.BackColor = Color.Green;
-                }
+                    if (dealObj.overVoltage == true)
+                    {//输出过压
+                        this.pictureBox5.BackColor = Color.Red;
+                    }
+                    else
+                    {
+                        this.pictureBox5.BackColor = Color.Green;
+                    }
 
-                if (dealObj.overCurrent == true)
-                {//输出过流
-                    this.pictureBox7.BackColor = Color.Red;
-                }
-                else
-                {
-                    this.pictureBox7.BackColor = Color.Green;
-                }
+                    if (dealObj.underVoltage == true)
+                    {//输入欠压
+                        this.pictureBox6.BackColor = Color.Red;
+                    }
+                    else
+                    {
+                        this.pictureBox6.BackColor = Color.Green;
+                    }
 
-                if (dealObj.fan == true)
-                {//风机
-                    this.pictureBox8.BackColor = Color.Red;
+                    if (dealObj.overCurrent == true)
+                    {//输出过流
+                        this.pictureBox7.BackColor = Color.Red;
+                    }
+                    else
+                    {
+                        this.pictureBox7.BackColor = Color.Green;
+                    }
+
+                    if (dealObj.fan == true)
+                    {//风机
+                        this.pictureBox8.BackColor = Color.Red;
+                    }
+                    else
+                    {
+                        this.pictureBox8.BackColor = Color.Green;
+                    }
+                    DealData.Output("UI 处理完毕");
                 }
-                else
-                {
-                    this.pictureBox8.BackColor = Color.Green;
-                }
+                );
+            }catch (Exception excep){
+                DealData.Output("Data received exception message:" + excep.Message);            
             }
-            );
         }
 
         //设置输出电流按钮被按下
@@ -371,5 +384,7 @@ namespace HX_1
         {
 
         }
+
+        
     }
 }
