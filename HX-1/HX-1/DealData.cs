@@ -30,11 +30,13 @@ namespace HX_1
             DealData.Output("In AnalysisResData function:");
             //设置文本框数据
             this.tempature = (int)data[3];
-            this.outputVoltage = (float)data[4] / 10;
-            this.outputCurrent = (float)data[6] / 10;
-
+            this.outputVoltage = ((float)data[5] * 256 + (float)data[4]) / 10;
+            this.outputCurrent = ((float)data[7] * 256 + (float)data[6]) / 10;
+            DealData.Output("outputVoltage = " + this.outputVoltage);
+            DealData.Output("outputCurrent = " + this.outputCurrent);
             //设置模块状态
             string DAT7 = System.Convert.ToString(data[8], 2);
+            DAT7 = DAT7.Insert(0, new string('0', 8 - DAT7.Length)); 
             //过温
             if (DAT7[0] == '1'){
                 this.overTempature = true;
@@ -63,7 +65,6 @@ namespace HX_1
             if (DAT7[7] == '1'){
                 this.shortCircuit = true;
             }
-
         }
 
         //检查相应数据的CRC16校验

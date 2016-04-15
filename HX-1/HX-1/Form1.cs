@@ -46,8 +46,14 @@ namespace HX_1
         private void Form_HX_FormClosed(object sender, FormClosedEventArgs e)
         {
             //终止查询状态线程
-            queryThread.Abort();
-            //关闭串口
+            try
+            {
+                queryThread.Abort();
+            }catch(Exception excep)
+            {
+                DealData.Output("Form_HX_FormClosed exception" + excep.Message);
+            }
+                //关闭串口
             try
             {
                 serialPort.Close();
@@ -77,18 +83,21 @@ namespace HX_1
         //连接按钮被按下时
         private void button_Connect_Click(object sender, EventArgs e)
         {
+            button_Connect.Enabled = false;
             DealData.Output("In button_Connect_Click function:");
             this.setSerialPortConfig();
 
             //判断地址栏是否有效
             int address = CheckInfo.Check_textBox_Address(this.textBox_Address.Text);
-            if (address == 0)
+            if (address == 0) {
+                button_Connect.Enabled = true;
                 return;
-            
+            }
             //获取Portname
             string portname = this.comboBox_COM.Text;
             if (portname.Equals("")) {
                 DealData.Output("portName is empty");
+                button_Connect.Enabled = true;
                 return;
             }
 
@@ -101,6 +110,7 @@ namespace HX_1
 
             if (!serialPort.IsOpen){
                 DealData.Output("serialPort is not open");
+                button_Connect.Enabled = true;
                 return;
             }
             
@@ -119,8 +129,8 @@ namespace HX_1
             queryThread = new Thread(new ThreadStart(queryThreadFunc));
             queryThread.IsBackground = false;
             queryThread.Start();
-            DealData.Output("QueryThreadFunc thread create");   
-           
+            DealData.Output("QueryThreadFunc thread create");
+            button_Connect.Enabled = true;
         }
         /*
          *函数功能：发送状态查询指令的线程
@@ -144,7 +154,7 @@ namespace HX_1
                     {
                         DealData.Output("Write exception" + excep.Message);
                     }
-                    Thread.Sleep(2000);//设置查询的间隔时间   
+                    Thread.Sleep(500);//设置查询的间隔时间   
                  }
              }catch (Exception excep){
                  DealData.Output("queryThreadFunc exception:" + excep.Message);
@@ -155,10 +165,17 @@ namespace HX_1
         //断开连接按钮被按下
         private void button_Disconnect_Click(object sender, EventArgs e)
         {
+            button_Disconnect.Enabled = false;
             DealData.Output("In button_Disconnect_Click function:");
             //将查询线程终止
-            queryThread.Abort();
-
+            try
+            {
+                queryThread.Abort();
+            }
+            catch (Exception excep)
+            {
+                DealData.Output("Thread exception" + excep.Message);
+            }
             this.button_Disconnect.Visible = false;
             this.button_Connect.Visible = true;
             try{
@@ -181,6 +198,7 @@ namespace HX_1
                 this.pictureBox7.BackColor = Color.White;
                 this.pictureBox8.BackColor = Color.White;
             }
+            button_Disconnect.Enabled = true;
         }    
 
         //通过事件接受
@@ -313,17 +331,20 @@ namespace HX_1
         //设置输出电流按钮被按下
         private void button_Submit_Click(object sender, EventArgs e)
         {
+            button_Submit.Enabled = false;
             DealData.Output("In button_Submit_Click function:");
             //获得设定输出电流
             int setOutputCurrent = CheckInfo.Check_textBox_setOutputCurrent(this.textBox_setOutputCurrent.Text);
-            if (setOutputCurrent == 0)      
+            if (setOutputCurrent == 0) {
+                button_Submit.Enabled = true;
                 return;
-
+            }
             //判断地址栏是否有效
             int address = CheckInfo.Check_textBox_Address(this.textBox_Address.Text);
-            if (address == 0)
+            if (address == 0) {
+                button_Submit.Enabled = true;
                 return;
-
+            }
             //将设置输出电流进行转换
             byte[] current = DealData.ConvertIntToByteArray(setOutputCurrent);
             byte[] tempData = { (byte)address, 0x11, current[0], current[1], 0x00, 0x00 };
@@ -339,16 +360,19 @@ namespace HX_1
             } catch (Exception excep){
                 DealData.Output("Write exception:" + excep.Message);
             }
+            button_Submit.Enabled = true;
         }
         //当输出使能按钮被按下
         private void button_OpenClose_Click(object sender, EventArgs e)
         {
+            button_OpenClose.Enabled = false;
             DealData.Output("In button_OpenClose_Click function:");
             //判断地址栏是否有效
             int address = CheckInfo.Check_textBox_Address(this.textBox_Address.Text);
-            if (address == 0)
+            if (address == 0) {
+                button_OpenClose.Enabled = true;
                 return;
-
+            }
             byte[] tempData = { (byte)address, 0x16, 0x00, 0x00, 0x00, 0x00 };
             byte[] crc = DealData.CRC16(tempData);
             byte[] openCloseOrder = { (byte)address, 0x16, 0x00, 0x00, 0x00, 0x00, crc[0], crc[1] };
@@ -373,6 +397,7 @@ namespace HX_1
             }catch (Exception excep){
                 DealData.Output("Write exception:" + excep.Message);
             }
+            button_OpenClose.Enabled = true;
         }
 
         //当文本框的值发生变化时
