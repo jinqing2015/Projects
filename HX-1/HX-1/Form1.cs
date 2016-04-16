@@ -167,17 +167,14 @@ namespace HX_1
         {
             button_Disconnect.Enabled = false;
             DealData.Output("In button_Disconnect_Click function:");
+
             //将查询线程终止
-            try
-            {
+            try{
                 queryThread.Abort();
-            }
-            catch (Exception excep)
-            {
+            }catch (Exception excep){
                 DealData.Output("Thread exception" + excep.Message);
             }
-            this.button_Disconnect.Visible = false;
-            this.button_Connect.Visible = true;
+
             try{
                 serialPort.Close();
             }catch (Exception excep) {
